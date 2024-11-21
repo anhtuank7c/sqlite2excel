@@ -16,6 +16,8 @@ source ./venv/bin/activate
 pip install -r ./requirements.txt
 ```
 
+Rename `.env.example` to `.env` then changes all the variables base on your need
+
 # Run project
 
 ```bash
