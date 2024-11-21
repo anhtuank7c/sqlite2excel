@@ -1,6 +1,6 @@
 # Sqlite to Excel
 
-# Setup
+## Setup
 
 Clone this project to your computer and install required dependencies
 
@@ -18,7 +18,7 @@ pip install -r ./requirements.txt
 
 Rename `.env.example` to `.env` then changes all the variables base on your need
 
-# Run project
+## Run project
 
 ```bash
 # Windows
@@ -28,6 +28,6 @@ python .\main.py
 python ./main.py
 ```
 
-# Build executable binary file
+## Build executable binary file
 
 Searching for PyInstaller for details
