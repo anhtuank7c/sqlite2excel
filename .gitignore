@@ -1,0 +1,8 @@
+*.db
+*.xlsx
+*.log
+.mypy_cache
+.venv
+build/
+dist/
+.env
