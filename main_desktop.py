@@ -3,6 +3,9 @@ from tkinter import ttk, filedialog
 import threading
 import os
 from tkinter import font
+from datetime import datetime
+import pandas as pd
+import sqlite3
 
 
 class DBConverterApp:
@@ -134,12 +137,11 @@ class DBConverterApp:
             self.input_path.set(file_path)
             self.load_tables_from_db(file_path)
 
-    def load_tables_from_db(self, db_path):
+    def load_tables_from_db(self, db_path: str):
         if not db_path:
             return
 
         try:
-            import sqlite3
 
             conn = sqlite3.connect(db_path)
             cursor = conn.cursor()
@@ -240,12 +242,47 @@ class DBConverterApp:
         self.should_cancel = True
         self.cancel_btn["state"] = "disabled"
 
+    def get_column_types(self, conn, table: str) -> dict[str, str]:
+        """Get column types for a given table."""
+        cursor = conn.cursor()
+        cursor.execute(f"PRAGMA table_info({table})")
+        return {row[1]: row[2].upper() for row in cursor.fetchall()}
+
+    def convert_timestamp(self, value):
+        """Convert timestamp to Vietnamese format."""
+        try:
+            if pd.isna(value) or isinstance(value, str):
+                print("Value is NaN", value)
+                return value
+
+            if isinstance(value, float):
+                value = datetime.fromtimestamp(value)
+
+            # Convert to 12-hour format with Vietnamese AM/PM
+            hour = value.hour
+            if hour == 0:
+                hour_12 = 12
+                meridiem = "SA"
+            elif hour < 12:
+                hour_12 = hour
+                meridiem = "SA"
+            elif hour == 12:
+                hour_12 = 12
+                meridiem = "CH"
+            else:
+                hour_12 = hour - 12
+                meridiem = "CH"
+
+            # Format date and time
+            formatted = f"{value.day:02d}/{value.month:02d}/{value.year} {hour_12}:{value.minute:02d}:{value.second:02d} {meridiem}"
+            return formatted
+
+        except Exception:
+            # Return original value if conversion fails
+            return value
+
     def process_data(self):
         try:
-            import sqlite3
-            import pandas as pd
-            from datetime import datetime
-
             # Get paths and tables
             db_path = self.input_path.get()
             output_dir = self.output_path.get()
@@ -279,8 +316,25 @@ class DBConverterApp:
                     break
 
                 try:
+
+                    column_types = self.get_column_types(conn, table)
                     # Read table from database
                     df = pd.read_sql_query(f"SELECT * FROM {table}", conn)
+
+                    # Process timestamp columns
+                    timestamp_columns = [
+                        col
+                        for col, type_ in column_types.items()
+                        if "TIMESTAMP" in type_
+                        or "DATETIME" in type_
+                        or "DATE" in type_
+                        or "created" == col
+                        or "updated" == col
+                    ]
+
+                    for col in timestamp_columns:
+                        if col in df.columns:
+                            df[col] = df[col].apply(self.convert_timestamp)
 
                     # Create Excel writer
                     excel_path = f"{output_dir}/{table}_{timestamp}.xlsx"
